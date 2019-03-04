@@ -100,3 +100,34 @@ int recv_int(char *address, int port) {
   return atoi(buf);
 
 };
+
+
+int ask_for_int(char *address, int port) {
+
+  // Connect
+  int sock = create_socket();
+  connect_socket(sock, address, port);
+
+  // Listen to response
+  char buf[BUFFSIZE];
+  recv_buffer(sock, buf, BUFFSIZE, BUFFSIZE);
+
+  close(sock);
+  return atoi(buf);
+};
+
+
+void serve_int(int to_send, char *address, int port) {
+  int sock1 = create_socket();
+  bind_socket(sock1, address, port);
+
+  // Listen to connections
+  int sock2 = accept_socket(sock1);
+
+  // Send response
+  char buf[BUFFSIZE];
+  sprintf(buf, "%d", to_send);
+  send_buffer(sock2, buf, BUFFSIZE, BUFFSIZE);
+  close(sock2);
+  close(sock1);
+};

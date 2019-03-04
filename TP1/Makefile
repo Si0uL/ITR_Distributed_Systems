@@ -2,13 +2,17 @@ CC = gcc
 CFLAGS = -Wall -std=c99
 CLIBS =
 
-all: clean socketlib.o star1.o
+all: clean socketlib.o star1.o star2.o
 	${CC} socketlib.o star1.o ${CLIBS} -o star1.out
+	${CC} socketlib.o star2.o ${CLIBS} -o star2.out
 
 socketlib.o: socketlib.c
 	${CC} -o $@ -c $< ${CFLAGS}
 
 star1.o: star1.c
+	${CC} -o $@ -c $< ${CFLAGS}
+
+star2.o: star2.c
 	${CC} -o $@ -c $< ${CFLAGS}
 
 clean:
