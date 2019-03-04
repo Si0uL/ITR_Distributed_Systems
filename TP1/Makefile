@@ -1,16 +1,15 @@
 CC = gcc
-CFLAGS = -Wall
+CFLAGS = -Wall -std=c99
 CLIBS =
 
-all: clean generator.o receiver.o
-	${CC} generator.o ${CLIBS} -o generator.out
-	${CC} receiver.o ${CLIBS} -o receiver.out
+all: clean socketlib.o star1.o
+	${CC} socketlib.o star1.o ${CLIBS} -o star1.out
 
-generator.o: generator.c
-	${CC} ${CFLAGS} -c generator.c -o generator.o
+socketlib.o: socketlib.c
+	${CC} -o $@ -c $< ${CFLAGS}
 
-receiver.o: receiver.c
-	${CC} ${CFLAGS} -c receiver.c -o receiver.o
+star1.o: star1.c
+	${CC} -o $@ -c $< ${CFLAGS}
 
 clean:
 	rm -f *.o *.out
