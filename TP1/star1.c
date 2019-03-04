@@ -8,6 +8,13 @@
 #define IP "127.0.0.1"
 #define BASE_PORT 6000
 
+/*
+ * Master has index 0, waits for all slaves to send him their values, then
+ * computes the minimum.
+ * Slaves have a non-zero index and send their random value to the master.
+ * Master has to be running and slaves have to be launched in order.
+ */
+
 int main(int argc, char const *argv[]) {
 
   if (argc != 3)

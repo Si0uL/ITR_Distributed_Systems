@@ -24,12 +24,12 @@ void send_buffer(char *buffer, int bufferSize, int packetSize, char *address,
 
   int max_idx = bufferSize / packetSize;
   for (int idx = 0; idx < max_idx; idx ++)
-    write(sock, &buffer[idx * packetSize], packetSize * sizeof(char));
+    write(sock, &buffer[idx * packetSize], packetSize);
 
   // Send remaining bytes
   int remaining = bufferSize - packetSize * max_idx;
   if (remaining != 0)
-    write(sock, &buffer[max_idx * packetSize], remaining * sizeof(char));
+    write(sock, &buffer[max_idx * packetSize], remaining);
 
   close(sock);
 };
@@ -65,7 +65,7 @@ int recv_buffer(char *buffer, int bufferSize, int packetSize, char *address,
 
   int count = -1, received = 0, idx = 0;
   while (count != 0) {
-    count = read(sock2, &buffer[idx * packetSize], packetSize * sizeof(char));
+    count = read(sock2, &buffer[idx * packetSize], packetSize);
     received += count;
     idx ++;
   }
