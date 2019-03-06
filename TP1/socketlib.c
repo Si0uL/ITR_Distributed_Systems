@@ -18,26 +18,26 @@ int create_socket() {
 }
 
 
-void bind_socket(int sock, char *address, int port) {
+int bind_socket(int sock, char *address, int port) {
   struct sockaddr_in my_addr;
   my_addr.sin_family = AF_INET;
   my_addr.sin_port = htons(port);
   my_addr.sin_addr.s_addr = INADDR_ANY;
   bzero(&(my_addr.sin_zero), 8);
   if (bind (sock, (struct sockaddr *) &my_addr, sizeof(struct sockaddr)) != 0)
-    error(2, 0, "Cannot bind to %s:%d\n", address, port);
+    return 1;
   listen(sock, 4);
+  return 0;
 }
 
 
-void connect_socket(int sock, char *address, int port) {
+int connect_socket(int sock, char *address, int port) {
   struct sockaddr_in my_addr;
   my_addr.sin_family = AF_INET;
   my_addr.sin_port = htons(port);
   my_addr.sin_addr.s_addr = inet_addr(address);
   bzero(&(my_addr.sin_zero), 8);
-  if (connect (sock, (struct sockaddr *) &my_addr, sizeof my_addr) != 0)
-    error(1, 0, "Cannot connect to %s:%d\n", address, port);
+  return connect(sock, (struct sockaddr *) &my_addr, sizeof my_addr);
 };
 
 
@@ -79,26 +79,24 @@ int recv_buffer(int sock, char *buffer, int bufferSize, int packetSize) {
 
 
 void send_int(int to_send, char *address, int port) {
-
   int sock = create_socket();
-  connect_socket(sock, address, port);
+  if (connect_socket(sock, address, port) != 0)
+  error(1, 0, "Unable to connect to %s:%d\n", address, port);
   char buf[BUFFSIZE];
   sprintf(buf, "%d", to_send);
   send_buffer(sock, buf, BUFFSIZE, BUFFSIZE);
   close(sock);
-
 };
 
 
 int recv_int(char *address, int port) {
-
   int sock1 = create_socket();
-  bind_socket(sock1, address, port);
+  if (bind_socket(sock1, address, port) != 0)
+    error(1, 0, "Unable to bind to %s:%d", address, port);
   int sock2 = accept_socket(sock1);
   char buf[BUFFSIZE];
   recv_buffer(sock2, buf, BUFFSIZE, BUFFSIZE);
   return atoi(buf);
-
 };
 
 
@@ -106,7 +104,8 @@ int ask_for_int(char *address, int port) {
 
   // Connect
   int sock = create_socket();
-  connect_socket(sock, address, port);
+  if (connect_socket(sock, address, port) != 0)
+    error(1, 0, "Unable to connect to %s:%d\n", address, port);
 
   // Listen to response
   char buf[BUFFSIZE];
@@ -119,7 +118,8 @@ int ask_for_int(char *address, int port) {
 
 void serve_int(int to_send, char *address, int port) {
   int sock1 = create_socket();
-  bind_socket(sock1, address, port);
+  if (bind_socket(sock1, address, port) != 0)
+    error(1, 0, "Unable to bind to %s:%d", address, port);
 
   // Listen to connections
   int sock2 = accept_socket(sock1);

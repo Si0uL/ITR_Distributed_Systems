@@ -1,8 +1,8 @@
 int create_socket();
 
-void bind_socket(int sock, char *address, int port);
+int bind_socket(int sock, char *address, int port);
 
-void connect_socket(int sock, char *address, int port);
+int connect_socket(int sock, char *address, int port);
 
 int accept_socket(int sock);
 
