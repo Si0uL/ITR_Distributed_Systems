@@ -5,4 +5,4 @@ CFLAGS = --std=c99 -Wall
 	$(CC) $^ -o $@ $(CFLAGS)
 
 clean:
-	rm -f *.o *.out logo2.pgm
+	rm -f *.o *.out output.pgm
