@@ -58,6 +58,12 @@ static const int conv_matrix_columns[CONV_MATRIX_SIZE][CONV_MATRIX_SIZE] = {
     { 3, 1, 3 }
 };
 
+static const int conv_matrix_borders[CONV_MATRIX_SIZE][CONV_MATRIX_SIZE] = {
+    { -1, -1, -1 },
+    { -1, 8, -1 },
+    { -1, -1, -1 }
+};
+
 void read_image (int image[H][W], char file_name[], int *p_h, int *p_w,
   int *p_levels) {
   FILE *fin;
@@ -117,8 +123,52 @@ void write_image (int image[H][W], char file_name[], int h, int w, int levels) {
   return;
 }
 
+void convolution(int input[H][W], int output[H][W],
+  const int conv_matrix[CONV_MATRIX_SIZE][CONV_MATRIX_SIZE]) {
+  // Recopy borders
+  for (int idx=0; idx < W; idx++) {
+    output[0][idx] = input[0][idx];
+    output[H-1][idx] = input[H-1][idx];
+  }
+  for (int idx=0; idx < H; idx++) {
+    output[idx][0] = input[idx][0];
+    output[idx][W-1] = input[idx][W-1];
+  }
+
+  // Apply convolution elsewhere
+  int row, col, r_conv, c_conv, sum;
+  // Convolution offset
+  int c_off = (int) CONV_MATRIX_SIZE / 2;
+  for (row = 1; row < H-1; row ++) {
+    for (col = 1; col < W-1; col ++) {
+      sum = 0;
+      for (r_conv = 0; r_conv < CONV_MATRIX_SIZE; r_conv ++) {
+        for (c_conv = 0; c_conv < CONV_MATRIX_SIZE; c_conv ++) {
+          sum += input[row-c_off+r_conv][col-c_off+c_conv] * \
+            conv_matrix[r_conv][c_conv];
+        }
+      }
+      output[row][col] = sum;
+    }
+  }
+  return;
+}
+
+void saturate(int image[H][W]) {
+  int row, col;
+  for (row=0; row < H; row++) {
+    for (col=0; col < W; col++) {
+      if (image[row][col] < 0)
+        image[row][col] = 0;
+      else if (image[row][col] > 255)
+        image[row][col] = 255;
+    }
+  }
+  return;
+}
+
 int main(void) {
-  int i, j, h, w, levels ;
+  int h, w, levels ;
   struct timeval tdeb, tfin;
 
   read_image (image_in, IMAGE_IN, &h, &w, &levels);
@@ -126,9 +176,8 @@ int main(void) {
   /* image processing */
   gettimeofday(&tdeb, NULL);
 
-  for (i = 0; i < h ; i++)
-    for (j = 0; j < w; j++)
-      image_out[i][j] = image_in[i][j];
+  convolution(image_in, image_out, conv_matrix_borders);
+  saturate(image_out);
 
   gettimeofday(&tfin, NULL);
   printf ("computation time (microseconds): %ld\n",
