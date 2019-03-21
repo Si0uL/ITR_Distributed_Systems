@@ -165,7 +165,7 @@ void saturate(int *image, int height, int width) {
 int main(int argc, char const *argv[]) {
 
   if (argc != 2) {
-    printf("Usage: %s <input_path>\n", argv[2]);
+    printf("Usage: %s <input_path>\n", argv[0]);
     return 1;
   }
 
@@ -173,7 +173,7 @@ int main(int argc, char const *argv[]) {
   struct timeval tdeb, tfin;
 
   int *image_in;
-  read_image (&image_in, "logo.pgm", &height, &width, &levels);
+  read_image (&image_in, (char *) argv[1], &height, &width, &levels);
 
   int *image_out = calloc(height * width, sizeof(int));
 
