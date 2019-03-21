@@ -122,12 +122,12 @@ void convolution(int *input, int *output, int height, int width,
   const int conv_matrix[CONV_MATRIX_SIZE][CONV_MATRIX_SIZE]) {
   // Recopy borders
   for (int idx=0; idx < width; idx++) {
-    output[0 * width + idx] = input[0 * width + idx];
-    output[(height-1) * width + idx] = input[(height-1) * width + idx];
+    output[0 * width + idx] = 0;
+    output[(height-1) * width + idx] = 0;
   }
   for (int idx=0; idx < height; idx++) {
-    output[idx * width + 0] = input[idx * width + 0];
-    output[idx * width + width-1] = input[idx * width + width-1];
+    output[idx * width + 0] = 0;
+    output[idx * width + width-1] = 0;
   }
 
   // Apply convolution elsewhere
