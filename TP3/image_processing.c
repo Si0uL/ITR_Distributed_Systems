@@ -35,6 +35,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/time.h>
+#include <mpi.h>
 
 #define CONV_MATRIX_SIZE 3
 
@@ -162,35 +163,117 @@ void saturate(int *image, int height, int width) {
   return;
 }
 
-int main(int argc, char const *argv[]) {
+int main(int argc, char *argv[]) {
 
   if (argc != 2) {
     printf("Usage: %s <input_path>\n", argv[0]);
     return 1;
   }
 
+  /* Global variables */
   int height, width, levels;
-  struct timeval tdeb, tfin;
+  struct timeval t1, t2, t3;
+  int *image_in, *image_out;
 
-  int *image_in;
-  read_image (&image_in, (char *) argv[1], &height, &width, &levels);
+  /* Local variables */
+  int chunk_height, my_height;
+  int *my_input, *my_output;
 
-  int *image_out = calloc(height * width, sizeof(int));
+  /* MPI params init. */
+  MPI_Init(&argc, &argv);
+	int rank, n_proc;
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	MPI_Comm_size(MPI_COMM_WORLD, &n_proc);
 
-  /* image processing */
-  gettimeofday(&tdeb, NULL);
+  /* Master deals with file open / close */
+  if (rank == 0) {
+    read_image (&image_in, (char *) argv[1], &height, &width, &levels);
+    image_out = calloc(height * width, sizeof(int));
+    chunk_height = (int) height / n_proc;
+  }
 
-  convolution(image_in, image_out, height, width, conv_matrix_borders);
-  saturate(image_out, height, width);
+  /* Transfert + Allocs */
+  if (rank == 0)
+    gettimeofday(&t1, NULL);
 
-  gettimeofday(&tfin, NULL);
-  printf ("computation time (microseconds): %ld\n",
-    (tfin.tv_sec - tdeb.tv_sec)*1000000 + (tfin.tv_usec - tdeb.tv_usec));
+  /* Broadcast chunk_height & width */
+  MPI_Bcast(&chunk_height, 1, MPI_INT, 0, MPI_COMM_WORLD);
+  MPI_Bcast(&width, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
-  write_image (image_out, "output.pgm", height, width, levels);
+  /* Allocations */
+  if (rank == 0) {
+    my_height = height - (n_proc-1) * chunk_height + 1;
+    // To solve case n_proc == 1
+    if (n_proc == 1)
+      my_height --;
+  } else if (rank == 1)
+    my_height = chunk_height + 1;
+  else
+    my_height = chunk_height + 2;
 
-  free(image_in);
-  free(image_out);
+  if (rank) {
+    my_input = calloc(my_height * width, sizeof(int));
+    my_output = calloc(my_height * width, sizeof(int));
+  }
+
+  /* Send Chunks */
+  if (rank == 0) {
+    for (int proc=1; proc < n_proc; proc++) {
+      if (proc == 1)
+        MPI_Send(image_in, (chunk_height + 1) * width, MPI_INT, proc, 0,
+          MPI_COMM_WORLD);
+      else
+        MPI_Send(&image_in[(proc - 1) * (chunk_height - 1) * width],
+          (chunk_height + 2) * width, MPI_INT, proc, 0, MPI_COMM_WORLD);
+    }
+    // Fake transfer for master
+    my_input = &image_in[(n_proc - 1) * (chunk_height - 1) * width];
+    my_output = &image_out[(n_proc - 1) * (chunk_height - 1) * width];
+
+  /* Receive Chunks */
+  } else
+      MPI_Recv(my_input, my_height * width, MPI_INT, 0, 0,
+        MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+  if (rank == 0)
+    gettimeofday(&t2, NULL);
+
+  /* Computation */
+  convolution(my_input, my_output, my_height, width, conv_matrix_borders);
+  saturate(my_output, my_height, width);
+
+  /* Receive Processed Chunks */
+  if (rank == 0)
+    for (int proc=1; proc < n_proc; proc++)
+      MPI_Recv(&image_out[(proc - 1) * chunk_height * width], chunk_height * width,
+        MPI_INT, proc, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+  /* Send Processed Chunks */
+  else {
+    if (rank == 1)
+      MPI_Send(my_output, chunk_height * width, MPI_INT, 0, 0,
+        MPI_COMM_WORLD);
+    else
+      MPI_Send(&my_output[1 * width], chunk_height * width, MPI_INT, 0, 0,
+        MPI_COMM_WORLD);
+  }
+
+  if (rank == 0) {
+    gettimeofday(&t3, NULL);
+    printf ("init time (microseconds): %ld\n",
+      (t2.tv_sec - t1.tv_sec)*1000000 + (t2.tv_usec - t1.tv_usec));
+    printf ("computation time (microseconds): %ld\n",
+      (t3.tv_sec - t2.tv_sec)*1000000 + (t3.tv_usec - t2.tv_usec));
+
+    write_image (image_out, "output.pgm", height, width, levels);
+
+    free(image_in);
+    free(image_out);
+  } else {
+    free(my_input);
+    free(my_output);
+  }
+
+  MPI_Finalize();
 
   return 0;
 }
